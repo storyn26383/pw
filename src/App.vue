@@ -21,7 +21,8 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, nextTick } from 'vue'
+  import { ref, computed, nextTick } from 'vue'
+  import sha256 from 'crypto-js/sha256'
 
   const ASCII_START = 33  // !
   const ASCII_END   = 126 // ~
@@ -31,13 +32,11 @@
   const passwordInput = ref<HTMLInputElement>()
 
   async function handleSubmit() {
-    const encoder = new TextEncoder
-    const data = encoder.encode(`${password.value}${salt.value}`)
-    const hashBuffer = await window.crypto.subtle.digest('SHA-256', data)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    const hashed = hashArray.map((byte, index) => String.fromCharCode((byte * index) % (ASCII_END - ASCII_START + 1) + ASCII_START)).join('')
+    const hashed = sha256(`${password.value}${salt.value}`).toString()
+    const bytes: number[] = hashed.match(/.{1,2}/g)!.map((hex: string) => parseInt(hex, 16))
+    const hashedPassword = bytes.map((byte, index) => String.fromCharCode((byte * index) % (ASCII_END - ASCII_START + 1) + ASCII_START)).join('')
 
-    await navigator.clipboard.writeText(hashed)
+    await navigator.clipboard.writeText(hashedPassword)
 
     password.value = ''
     salt.value = ''
